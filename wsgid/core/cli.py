@@ -12,7 +12,9 @@ import plugnplay
 import daemon
 import signal
 
+
 class Cli(object):
+
   # PID types we may create
   MASTER, WORKER = range(2)
 
@@ -42,8 +44,7 @@ class Cli(object):
         recv=options.recv, send=options.send,\
         wsgi_app=options.wsgi_app)
 
-
-    self.options = options # Will be used by the signal handlers
+    self.options = options  # Will be used by the signal handlers
     try:
       daemon_options = self._create_daemon_options(options)
       ctx = daemon.DaemonContext(**daemon_options)
@@ -109,8 +110,6 @@ class Cli(object):
     if not os.path.exists(path):
       os.mkdir(path, 0700)
 
-
-
   '''
     This is the SIGTERM handler of the master process.
     This method kills any worker left when master process is killed
@@ -154,7 +153,7 @@ class Cli(object):
 
   def _create_daemon_options(self, options):
     daemon = {'detach_process': not options.no_daemon}
-    daemon.update({ 'stdin': sys.stdin,
+    daemon.update({'stdin': sys.stdin,
                    'stdout': sys.stdout,
                    'stderr': sys.stderr})
     if options.no_daemon:
@@ -185,7 +184,6 @@ class Cli(object):
                        'uid': stat.st_uid,
                        'gid': stat.st_gid})
     return daemon
-
 
   def _normalize_path(self, options):
     if options.chroot:
@@ -227,7 +225,6 @@ class Cli(object):
     logger = get_main_logger()
     logger.setLevel(level)
 
-
     if options.chroot:
       log_path = os.path.join('/', 'logs/wsgid.log')
 
@@ -245,4 +242,3 @@ class Cli(object):
     logger.addHandler(console)
     self.log = logger
     set_main_logger(logger)
-
