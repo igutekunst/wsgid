@@ -3,4 +3,3 @@
 __progname__ = "wsgid"
 __version__ = "v0.5.0"
 __description__ = 'A complete WSGI environment for mongrel2 handlers'
-
