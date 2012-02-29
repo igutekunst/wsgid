@@ -17,7 +17,7 @@ from wsgid.commands import *
 class ParserTest(unittest.TestCase):
 
 
-  def tearDown(self):
+  def setUp(self):
       wsgid.conf.settings = None
 
   '''
