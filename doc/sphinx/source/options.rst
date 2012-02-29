@@ -99,6 +99,7 @@ This option will make wsgid watch for its child processes. If any child process 
 
 mongrel2-chroot
 ***************
+  ``--mongrel2-chroot``
 
 .. versionadded:: 0.5.0
 
@@ -107,6 +108,14 @@ This option is used if you want to take advantage of mongrel2's async upload. Yo
 Since mongrel2 creates all temporary files relative to it's chroot, each wsgid instance handling requests from any mongrel2 server instance must know where this server is chrooted. This is necessary because wsgid needs to prepend this chroot path to the path mongrel2 creates the files.
 
 If this option is not set, wsgid will use the original path provided by mongrel2.
+
+django
+******
+  ``--django``
+
+.. versionadded:: 0.6.0
+
+This option forces wsgid to load your app as a django app. This allows you to have a more sophisticated django setup (for example: having a settings package instead of a ``settings.py`` module). To use this option all you have to ensure is that ``import myproj.settings`` works.  
 
 .. _json-config:
 
