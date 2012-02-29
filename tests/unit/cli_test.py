@@ -60,11 +60,14 @@ class CliTest(unittest.TestCase):
     self.assertEquals(opt['stderr'], sys.stderr)
 
   '''
-    We should not try to chroot if --app-path was not passed
+    If we choose to --chroot and --app-path is not passed, we should
+    use the current working dir as the --app-path
   '''
   def test_no_chroot_if_no_app_path(self):
-    opt = self._parse('--chroot')
-    self.assertFalse(opt.has_key('chroot_directory'))
+    with patch('os.getcwd') as cwd:
+      cwd.return_value = '/tmp'
+      opt = self._parse('--chroot')
+      self.assertEquals('/tmp', opt['chroot_directory'])
 
   '''
     We shoud not chroot if --chroot is not passed.

@@ -26,8 +26,6 @@ class Cli(object):
   '''
 
   def validate_input_params(self, app_path, recv, send, wsgi_app):
-    if not app_path and not wsgi_app:
-      raise Exception("--app-path is mandatory when --wsgi-app is not passed\n")
     if app_path and not os.path.exists(app_path):
       raise Exception("path {0} does not exist.\n".format(app_path))
     if not recv:
