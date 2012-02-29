@@ -22,9 +22,6 @@ class DjangoLoaderTest(unittest.TestCase):
     self.wsgid_appfolder_fullpath = os.path.join(self.abs_app_path, 'app/')
     self.app_loader = DjangoAppLoader()
 
-#  def tearDown(self):
-#    setattr(settings, '_wrapped', None) #So django thinks we are not configured yet
-
   '''
    Ensure we can load a djangoapp even with hidden folders
    inside the wsgi-app folder.

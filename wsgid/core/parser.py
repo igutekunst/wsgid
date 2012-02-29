@@ -98,6 +98,9 @@ def _create_core_options():
     add_option('chroot', help="Chroot to the value of --app-path, before loading the app.",\
         type=BOOL, dest="chroot"),
 
+    add_option('django', help="Force the app to be loaded as a django app",\
+        type=BOOL, dest="django"),
+
     add_option('recv', \
         help="TCP socket used to receive data from mongrel2. Format is IP:Port or *:Port to listen on any local IP",\
       dest="recv"),

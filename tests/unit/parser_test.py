@@ -59,6 +59,18 @@ class ParserTest(unittest.TestCase):
       opts = parser.parse_options()
       self.assertEquals(1, opts.workers)
 
+  def test_parse_forced_django_app(self):
+    sys.argv[1:] = ['--app-path=/tmp', '--django']
+
+    opts = parser.parse_options()
+    self.assertTrue(wsgid.conf.settings.django)
+
+  def test_parse_forced_django_defaults_to_false(self):
+    sys.argv[1:] = ['--app-path=/tmp']
+
+    opts = parser.parse_options()
+    self.assertFalse(wsgid.conf.settings.django)
+
   '''
    Ensure we save the parsed options at wsgid.conf.settings
   '''

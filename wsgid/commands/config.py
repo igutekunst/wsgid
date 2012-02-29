@@ -34,6 +34,7 @@ class CommandConfig(Plugin):
         self._override_if_not_none('recv', cfg_values, options.recv)
         self._override_if_not_none('send', cfg_values, options.send)
         self._override_if_not_none('mongrel2_chroot', cfg_values, options.mongrel2_chroot)
+        self._override_if_not_none('django', cfg_values, options.django)
 
         # Custom config command options
         if options.no_debug:
