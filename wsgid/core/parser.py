@@ -120,7 +120,7 @@ def parse_options(use_config=True):
     if conf.settings:  # Do not parse twice
         return conf.settings
     options = _parse_args()
-    options.app_path = _full_path(options.app_path)
+    options.app_path = _full_path(options.app_path or os.getcwd())
     options.envs = {}
 
     if options.app_path:
