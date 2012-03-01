@@ -2,7 +2,8 @@
 
 import unittest
 from wsgid.core import Wsgid
-
+from wsgid.test import FakeOptions
+import wsgid.conf
 import os
 import urllib2
 import logging
@@ -10,7 +11,7 @@ import logging
 class WsgidServeTest(unittest.TestCase):
 
   def setUp(self):
-    pass
+    wsgid.conf.settings = FakeOptions(mongrel2_chroot=None)
 
   def test_app_return_body(self):
     def app(environ, start_response):
