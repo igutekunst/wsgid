@@ -4,6 +4,7 @@ import urllib
 from message import Message
 from . import StartResponse, get_main_logger
 import zmq
+from .. import zeromq
 from StringIO import StringIO
 import sys
 import os
@@ -17,7 +18,7 @@ class Wsgid(object):
         self.recv = recv
         self.send = send
 
-        self.ctx = zmq.Context()
+        self.ctx = zeromq.context
         self.log = get_main_logger()
 
     def serve(self):
