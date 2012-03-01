@@ -1,3 +1,6 @@
+
+.. _app-structure:
+
 Application Structure
 =====================
 
