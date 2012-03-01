@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-Version 0.5.1
+Version 0.6.0
 *************
 
  * New option ``--django`` to force your app to be loaded as a django app. `Github issue #39`_.
