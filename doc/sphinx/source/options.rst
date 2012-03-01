@@ -17,6 +17,10 @@ app-path
 Path to the WSGI application. This should be the path where the code of your application is located. If the app is installed system wide, you don't need this.
 The directory that contains your application must obey some rules, please see :doc:`appstructure`.
 
+.. versionadded:: 0.6.0
+
+``--app-path`` is not mandatory anymore. If you omit it, wsgid will use the current working directory (as returned by ``os.getcwd()``) as your app path.
+
 wsgi-app
 ********
   ``--wsgi-app``
