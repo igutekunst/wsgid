@@ -5,7 +5,8 @@ import os
 import sys
 
 from wsgid.loaders.djangoloader import DjangoAppLoader
-from wsgid.test import fullpath
+from wsgid.test import fullpath, FakeOptions
+import wsgid.conf
 from mock import patch, Mock
 from django.conf import settings
 import django
@@ -21,9 +22,7 @@ class DjangoLoaderTest(unittest.TestCase):
     self.abs_app_path = os.path.join(FIXTURE, WSGID_APP_NAME)
     self.wsgid_appfolder_fullpath = os.path.join(self.abs_app_path, 'app/')
     self.app_loader = DjangoAppLoader()
-
-#  def tearDown(self):
-#    setattr(settings, '_wrapped', None) #So django thinks we are not configured yet
+    wsgid.conf.settings = FakeOptions(django=False)
 
   '''
    Ensure we can load a djangoapp even with hidden folders
@@ -45,6 +44,14 @@ class DjangoLoaderTest(unittest.TestCase):
   '''
   def test_can_load_django_app(self, *args):
       self.assertTrue(self.app_loader.can_load(self.wsgid_appfolder_fullpath))
+
+  '''
+   Check that if the --django option was passed, djangoloader returns always True
+  '''
+  def test_can_load_forced_as_django(self, *args):
+      with patch('wsgid.conf.settings') as setting:
+        setting.django = True
+        self.assertTrue(self.app_loader.can_load("whatever"))
 
   '''
    A valid django folder must be importable, so we have to check

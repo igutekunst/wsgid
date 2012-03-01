@@ -1,5 +1,6 @@
 from wsgid.loaders import IAppLoader
 from wsgid.core import Plugin, get_main_logger
+import wsgid.conf
 try:
     from django.conf import settings
 except ImportError:
@@ -33,7 +34,7 @@ class DjangoAppLoader(Plugin):
         return None
 
     def can_load(self, app_path):
-        return self._first_djangoproject_dir(app_path) is not None
+        return wsgid.conf.settings.django or self._first_djangoproject_dir(app_path) is not None
 
     def _load_django_extra_options(self, path):
         parsed = {}
