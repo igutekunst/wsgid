@@ -19,12 +19,11 @@ class CommandInit(Plugin):
 
     def run(self, options, **kwargs):
         sys.stderr.write("Initializing wsgid app folder in {0}...\n".format(options.app_path))
+        needed_folders = ['pid', 'pid/master', 'pid/worker', 'app', 'logs', 'plugins']
         self._create_if_not_exist(options.app_path)
-        self._create_if_not_exist(os.path.join(options.app_path, 'pid'))
-        self._create_if_not_exist(os.path.join(options.app_path, 'pid/master'))
-        self._create_if_not_exist(os.path.join(options.app_path, 'pid/worker'))
-        self._create_if_not_exist(os.path.join(options.app_path, 'app'))
-        self._create_if_not_exist(os.path.join(options.app_path, 'logs'))
+
+        for folder in needed_folders:
+            self._create_if_not_exist(os.path.join(options.app_path, folder))
 
     def extra_options(self):
         return [CommandLineOption(name='no-init', help='Turns off debug option', type=BOOL)]
