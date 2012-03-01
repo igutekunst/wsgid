@@ -43,3 +43,14 @@ If we start another instance of wsgid with 2 workers we would have two more file
 
 Since we write all worker pids inside the same folder, for now it's not possible to know which worker belongs to which master process.
 
+The plugins folder
+******************
+
+.. versionadded:: 0.6.0
+
+
+The ``plugins`` folder is the place where you can drop your wsgid plugins. Wsgis's plugins infrastructure is implemented using `plugnplay`_. One example of such a plugin would be an additional AppLoader (see more at :ref:`app-loader`). You can write your own AppLoader and just drop the ``.py`` file in this folder and wsgid will automatically use it, if necessary.
+
+.. _plugnplay: https://github.com/daltonmatos/plugnplay
+
+
