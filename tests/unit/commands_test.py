@@ -49,6 +49,11 @@ class CommandInitTest(unittest.TestCase):
     self.init.run(self.opt)
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "app")), "Did not create app folder")
 
+  @patch('sys.stderr')
+  def test_create_plugins_dir(self, *args):
+    self.init.run(self.opt)
+    self.assertTrue(os.path.exists(os.path.join(APP_PATH, "plugins")), "Did not create app folder")
+
   '''
    Checks there is no problem if we run "init" on an already
    inited path
@@ -63,6 +68,7 @@ class CommandInitTest(unittest.TestCase):
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "pid")))
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "pid/master")))
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "pid/worker")))
+    self.assertTrue(os.path.exists(os.path.join(APP_PATH, "plugins")), "plugins dir should exist")
 
 class CommandConfigTest(unittest.TestCase):
 
