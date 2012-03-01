@@ -17,7 +17,7 @@ from wsgid.commands import *
 class ParserTest(unittest.TestCase):
 
 
-  def tearDown(self):
+  def setUp(self):
       wsgid.conf.settings = None
 
   '''
@@ -97,7 +97,12 @@ class ParserTest(unittest.TestCase):
     self.assertEquals(None, wsgid.conf.settings.recv)
     self.assertEquals('/tmp', wsgid.conf.settings.app_path)
 
-
+  def test_app_path_defaults_to_pwd(self):
+    sys.argv[1:] = []
+    with patch('os.getcwd') as cwd:
+      cwd.return_value = '/my/path'
+      opts = parser.parse_options()
+      self.assertEquals('/my/path', opts.app_path)
 
 
 class CommandLineOptionTest(unittest.TestCase):
