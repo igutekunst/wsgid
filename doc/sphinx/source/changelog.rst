@@ -6,11 +6,12 @@ Version 0.5.1
 *************
 
  * New option ``--django`` to force your app to be loaded as a django app. `Github issue #39`_.
-
+ * ``--app-path`` is not mandatory anymore. Wsgid will ise the current working directory. `Github issue #34`_.
 
  * Commit log:  https://github.com/daltonmatos/wsgid/compare/v0.5.0...v0.6.0
 
 .. _Github issue #39: https://github.com/daltonmatos/wsgid/issues/39
+.. _Github issue #34: https://github.com/daltonmatos/wsgid/issues/34
 
 Version 0.5.0
 *************
