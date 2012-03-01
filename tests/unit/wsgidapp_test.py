@@ -27,6 +27,9 @@ class WsgidAppTest(unittest.TestCase):
   def test_return_empty_worker_pids(self):
     self.assertEquals([], self.empty_wsgidapp.worker_pids())
 
+  def test_return_plugins_dir(self):
+    self.assertEquals(os.path.join(self.empty_apppath, 'plugins'), self.empty_wsgidapp.pluginsdir)
+
   @patch('sys.stderr')
   def test_return_pids(self, *args):
     app = os.path.join(FIXTURE, 'app-with-pids')
@@ -34,7 +37,7 @@ class WsgidAppTest(unittest.TestCase):
     open(os.path.join(app, 'pid/master/3345.pid'), 'w')
     open(os.path.join(app, 'pid/master/2938.pid'), 'w')
     open(os.path.join(app, 'pid/master/no-pid.pid'), 'w')
-    
+
     open(os.path.join(app, 'pid/worker/8756.pid'), 'w')
     open(os.path.join(app, 'pid/worker/3948.pid'), 'w')
     open(os.path.join(app, 'pid/worker/invalid.pid'), 'w')

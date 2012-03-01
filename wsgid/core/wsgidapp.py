@@ -24,6 +24,10 @@ class WsgidApp(object):
     def worker_pids(self):
         return sorted(self._get_pids(self.fullpath, 'pid/worker/'))
 
+    @property
+    def pluginsdir(self):
+        return os.path.join(self.fullpath, 'plugins')
+
     def _get_pids(self, base_path, pids_path):
         final_path = os.path.join(base_path, pids_path, '*.pid')
         pid_files = glob(final_path)

@@ -53,6 +53,11 @@ class Cli(object):
         options.app_path = self._normalize_path(options)
         self._set_loggers(options)
 
+        wsgidapp = WsgidApp(options.app_path)
+        self.log.debug("Loading plugins from {pluginsdir}".format(pluginsdir=wsgidapp.pluginsdir))
+        plugnplay.set_plugin_dirs(wsgidapp.pluginsdir)
+        plugnplay.load_plugins()
+
         self.log.debug("Using configs values {cfg}".format(cfg=options))
         self.log.debug("Dropping privileges to: uid={uid}, gid={gid}".format(uid=daemon_options['uid'], gid=daemon_options['gid']))
         self.log.info("Master process started")
