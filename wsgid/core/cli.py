@@ -56,7 +56,7 @@ class Cli(object):
         wsgidapp = WsgidApp(options.app_path)
         self.log.debug("Loading plugins from {pluginsdir}".format(pluginsdir=wsgidapp.pluginsdir))
         plugnplay.set_plugin_dirs(wsgidapp.pluginsdir)
-        plugnplay.load_plugins()
+        plugnplay.load_plugins(logger = self.log)
 
         self.log.debug("Using configs values {cfg}".format(cfg=options))
         self.log.debug("Dropping privileges to: uid={uid}, gid={gid}".format(uid=daemon_options['uid'], gid=daemon_options['gid']))
