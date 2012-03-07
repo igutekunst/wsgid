@@ -231,7 +231,8 @@ class CliTest(unittest.TestCase):
       cli._set_loggers(opts)
       self.assertEquals(1, logging.StreamHandler.call_count)
 
-  def test_clean_pid_files_on_keyboard_interrupt(self):
+  @patch('sys.stderr')
+  def test_clean_pid_files_on_keyboard_interrupt(self, *args):
     path = os.path.join(FIXTURES_PATH, 'clean-pids-app')
     initcmd = CommandInit()
     opts = FakeOptions(app_path=path)
