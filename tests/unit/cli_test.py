@@ -252,3 +252,25 @@ class CliTest(unittest.TestCase):
                 app = WsgidApp(path)
                 self.assertEquals([], app.master_pids())
                 self.assertEquals([], app.worker_pids())
+
+    def test_check_zmq_sockets(self):
+        cli = Cli()
+        self.assertTrue(cli._is_valid_socket("tcp://127.0.0.1:8080"))
+        self.assertTrue(cli._is_valid_socket("tcp://*:8080"))
+        self.assertTrue(cli._is_valid_socket("tcp://machine.intranet.org:8080"))
+        self.assertTrue(cli._is_valid_socket("ipc:///tmp/sock"))
+        self.assertTrue(cli._is_valid_socket("inproc://#2"))
+        self.assertTrue(cli._is_valid_socket("pgm:///tmp/sock"))
+        self.assertFalse(cli._is_valid_socket("tcp://127.0.0.1"))
+        self.assertFalse(cli._is_valid_socket("tcp://127.0.0.1:abc"))
+        self.assertFalse(cli._is_valid_socket("invalid://127.0.0.1:abc"))
+
+    def test_socket_validation(self):
+        cli = Cli()
+        cli.validate_input_params(app_path='/tmp', send='tcp://127.0.0.1:8800', recv='ipc:///tmp/sock')
+        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', send='invalid://127.0.0.1:88')
+        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1:89')
+        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1', \
+                send='ipc:///tmp/sock')
+        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1:89', \
+                send='invalid://127.0.0.1:88')
