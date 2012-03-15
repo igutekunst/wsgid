@@ -43,9 +43,9 @@ class Cli(object):
   def validate_input_params(self, app_path, recv, send):
     if app_path and not os.path.exists(app_path):
       raise Exception("path {0} does not exist.\n".format(app_path))
-    if not recv:
+    if not recv or not self._is_valid_socket(recv):
       raise Exception("Recv socket is mandatory\n")
-    if not send:
+    if not send or not self._is_valid_socket(send):
       raise Exception("Send socker is mandatory\n")
 
   def run(self):
