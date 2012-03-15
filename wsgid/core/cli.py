@@ -3,6 +3,7 @@
 import sys
 import logging
 import os
+import re
 
 from . import get_main_logger, set_main_logger, run_command
 from ..commands import *
@@ -14,6 +15,12 @@ import signal
 
 
 class Cli(object):
+  '''
+   Command Line interface for wsgid
+  '''
+
+  ZMQ_SOCKET_SPEC = re.compile("(?P<proto>inproc|ipc|tcp|pgm|epgm)://(?P<address>.*)$")
+  TCP_SOCKET_SPEC = re.compile("(?P<adress>.*):(?P<port>[0-9]+)")
 
   # PID types we may create
   MASTER, WORKER = range(2)
@@ -21,16 +28,24 @@ class Cli(object):
   def __init__(self):
     self.log = get_main_logger()
 
-  '''
-   Command Line interface for wsgid
-  '''
 
-  def validate_input_params(self, app_path, recv, send, wsgi_app):
+
+  def _is_valid_socket(self, sockspec):
+    generic_match = self.ZMQ_SOCKET_SPEC.match(sockspec)
+    if generic_match:
+        proto = generic_match.group('proto')
+        if proto == "tcp":
+            return self.TCP_SOCKET_SPEC.match(generic_match.group('address'))
+        else:
+            return True
+    return False
+
+  def validate_input_params(self, app_path, recv, send):
     if app_path and not os.path.exists(app_path):
       raise Exception("path {0} does not exist.\n".format(app_path))
-    if not recv:
+    if not recv or not self._is_valid_socket(recv):
       raise Exception("Recv socket is mandatory\n")
-    if not send:
+    if not send or not self._is_valid_socket(send):
       raise Exception("Send socker is mandatory\n")
 
   def run(self):
@@ -39,8 +54,7 @@ class Cli(object):
 
     options = parser.parse_options()
     self.validate_input_params(app_path=options.app_path,\
-        recv=options.recv, send=options.send,\
-        wsgi_app=options.wsgi_app)
+        recv=options.recv, send=options.send)
 
     self.options = options  # Will be used by the signal handlers
     try:
