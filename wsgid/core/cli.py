@@ -44,9 +44,9 @@ class Cli(object):
     if app_path and not os.path.exists(app_path):
       raise Exception("path {0} does not exist.\n".format(app_path))
     if not recv or not self._is_valid_socket(recv):
-      raise Exception("Recv socket is mandatory\n")
+      raise Exception("Recv socket is mandatory, value received: {0}\n".format(recv))
     if not send or not self._is_valid_socket(send):
-      raise Exception("Send socker is mandatory\n")
+      raise Exception("Send socker is mandatory, value received: {0}\n".format(send))
 
   def run(self):
     if run_command():
