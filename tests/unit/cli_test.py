@@ -7,7 +7,7 @@ import logging
 
 import unittest
 from wsgid.core.cli import Cli
-from wsgid.core import parser, WsgidApp
+from wsgid.core import parser, WsgidApp, validate_input_params, _is_valid_socket
 from wsgid.commands import CommandInit
 from wsgid.test import fullpath, FakeOptions
 import wsgid.conf
@@ -199,7 +199,7 @@ class CliTest(unittest.TestCase):
         initcmd.run(FakeOptions(app_path=path))
         with patch('daemon.DaemonContext', new=MagicMock()):
             with patch.object(Cli, '_create_worker'):
-                with patch.object(Cli, 'validate_input_params'):
+                with patch('wsgid.core.cli.validate_input_params'):
                     with patch.object(Cli, '_wait_workers'):
                         daemon.DaemonContext.__enter__ = Mock()
                         daemon.DaemonContext.__exit__ = Mock()
@@ -254,23 +254,21 @@ class CliTest(unittest.TestCase):
                 self.assertEquals([], app.worker_pids())
 
     def test_check_zmq_sockets(self):
-        cli = Cli()
-        self.assertTrue(cli._is_valid_socket("tcp://127.0.0.1:8080"))
-        self.assertTrue(cli._is_valid_socket("tcp://*:8080"))
-        self.assertTrue(cli._is_valid_socket("tcp://machine.intranet.org:8080"))
-        self.assertTrue(cli._is_valid_socket("ipc:///tmp/sock"))
-        self.assertTrue(cli._is_valid_socket("inproc://#2"))
-        self.assertTrue(cli._is_valid_socket("pgm:///tmp/sock"))
-        self.assertFalse(cli._is_valid_socket("tcp://127.0.0.1"))
-        self.assertFalse(cli._is_valid_socket("tcp://127.0.0.1:abc"))
-        self.assertFalse(cli._is_valid_socket("invalid://127.0.0.1:abc"))
+        self.assertTrue(_is_valid_socket("tcp://127.0.0.1:8080"))
+        self.assertTrue(_is_valid_socket("tcp://*:8080"))
+        self.assertTrue(_is_valid_socket("tcp://machine.intranet.org:8080"))
+        self.assertTrue(_is_valid_socket("ipc:///tmp/sock"))
+        self.assertTrue(_is_valid_socket("inproc://#2"))
+        self.assertTrue(_is_valid_socket("pgm:///tmp/sock"))
+        self.assertFalse(_is_valid_socket("tcp://127.0.0.1"))
+        self.assertFalse(_is_valid_socket("tcp://127.0.0.1:abc"))
+        self.assertFalse(_is_valid_socket("invalid://127.0.0.1:abc"))
 
     def test_socket_validation(self):
-        cli = Cli()
-        cli.validate_input_params(app_path='/tmp', send='tcp://127.0.0.1:8800', recv='ipc:///tmp/sock')
-        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', send='invalid://127.0.0.1:88')
-        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1:89')
-        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1', \
+        validate_input_params(app_path='/tmp', send='tcp://127.0.0.1:8800', recv='ipc:///tmp/sock')
+        self.assertRaises(Exception, validate_input_params, app_path='/tmp', send='invalid://127.0.0.1:88')
+        self.assertRaises(Exception, validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1:89')
+        self.assertRaises(Exception, validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1', \
                 send='ipc:///tmp/sock')
-        self.assertRaises(Exception, cli.validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1:89', \
+        self.assertRaises(Exception, validate_input_params, app_path='/tmp', recv='tcp://127.0.0.1:89', \
                 send='invalid://127.0.0.1:88')

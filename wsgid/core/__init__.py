@@ -1,6 +1,6 @@
 #encoding: utf-8
 
-__all__ = ['StartResponse', 'StartResponseCalledTwice', 'Plugin', 'run_command', 'get_main_logger']
+__all__ = ['StartResponse', 'StartResponseCalledTwice', 'Plugin', 'run_command', 'get_main_logger', 'validate_input_params']
 
 import sys
 import logging
@@ -8,7 +8,8 @@ import plugnplay
 from command import ICommand
 import parser
 from wsgidapp import WsgidApp
-
+import re
+import os
 
 Plugin = plugnplay.Plugin
 
@@ -75,5 +76,28 @@ def run_command():
                 command.run(parser.parse_options(use_config=False), command_name=cname)
                 return True
     return False
+
+
+ZMQ_SOCKET_SPEC = re.compile("(?P<proto>inproc|ipc|tcp|pgm|epgm)://(?P<address>.*)$")
+TCP_SOCKET_SPEC = re.compile("(?P<adress>.*):(?P<port>[0-9]+)")
+
+def _is_valid_socket(sockspec):
+    generic_match = ZMQ_SOCKET_SPEC.match(sockspec)
+    if generic_match:
+        proto = generic_match.group('proto')
+        if proto == "tcp":
+            return TCP_SOCKET_SPEC.match(generic_match.group('address'))
+        else:
+            return True
+    return False
+
+def validate_input_params(app_path=None, recv=None, send=None):
+    if app_path and not os.path.exists(app_path):
+        raise Exception("path {0} does not exist.\n".format(app_path))
+    if not recv or not _is_valid_socket(recv):
+        raise Exception("Recv socket is mandatory, value received: {0}\n".format(recv))
+    if not send or not _is_valid_socket(send):
+        raise Exception("Send socker is mandatory, value received: {0}\n".format(send))
+
 
 from wsgid import Wsgid
