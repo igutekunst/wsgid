@@ -1,4 +1,4 @@
-from wsgid.core import Plugin
+from wsgid.core import Plugin, validate_input_params
 from wsgid.core.command import ICommand
 from wsgid.core.parser import CommandLineOption, BOOL
 import os
@@ -40,6 +40,7 @@ class CommandConfig(Plugin):
         if options.no_debug:
             cfg_values['debug'] = str((not options.no_debug))
 
+        validate_input_params(send=cfg_values['send'], recv=cfg_values['recv'])
         # Rewrite the config file
         f.seek(0)
         f.truncate()
