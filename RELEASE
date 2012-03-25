@@ -1,0 +1,17 @@
+
+ * Merge branch develop into branch master
+
+  git mg --no-ff -m 'release 0.6.0' develop
+
+ * Create a new tag on top of branch master. Tags have a name =
+    "v<version-number>" and a comment of "New release: <version-number>"
+
+   git tag -a v0.6.0
+
+ * Create a new tar.bz package, on top of branch master (or the new tag)
+   git archive --format=tar --prefix=wsgid-<version-number>/ | bzip2 -v9 - >
+   /tmp/wsgid-<version-number>.tar.bz2
+
+
+ Since we merged with --no-ff a new commit was created on master we should
+ merge this new commit back into develop. This way master branch will never  be ahead
