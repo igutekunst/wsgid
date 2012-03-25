@@ -3,8 +3,9 @@
 import sys
 import logging
 import os
+import re
 
-from . import get_main_logger, set_main_logger, run_command
+from . import get_main_logger, set_main_logger, run_command, validate_input_params
 from ..commands import *
 import parser
 
@@ -12,38 +13,26 @@ import plugnplay
 import daemon
 import signal
 
+
 class Cli(object):
+  '''
+   Command Line interface for wsgid
+  '''
   # PID types we may create
   MASTER, WORKER = range(2)
 
   def __init__(self):
     self.log = get_main_logger()
 
-  '''
-   Command Line interface for wsgid
-  '''
-
-  def validate_input_params(self, app_path, recv, send, wsgi_app):
-    if not app_path and not wsgi_app:
-      raise Exception("--app-path is mandatory when --wsgi-app is not passed\n")
-    if app_path and not os.path.exists(app_path):
-      raise Exception("path {0} does not exist.\n".format(app_path))
-    if not recv:
-      raise Exception("Recv socket is mandatory\n")
-    if not send:
-      raise Exception("Send socker is mandatory\n")
-
   def run(self):
     if run_command():
       sys.exit(0)
 
     options = parser.parse_options()
-    self.validate_input_params(app_path=options.app_path,\
-        recv=options.recv, send=options.send,\
-        wsgi_app=options.wsgi_app)
+    validate_input_params(app_path=options.app_path,\
+        recv=options.recv, send=options.send)
 
-
-    self.options = options # Will be used by the signal handlers
+    self.options = options  # Will be used by the signal handlers
     try:
       daemon_options = self._create_daemon_options(options)
       ctx = daemon.DaemonContext(**daemon_options)
@@ -53,6 +42,11 @@ class Cli(object):
         # the paths
         options.app_path = self._normalize_path(options)
         self._set_loggers(options)
+
+        wsgidapp = WsgidApp(options.app_path)
+        self.log.debug("Loading plugins from {pluginsdir}".format(pluginsdir=wsgidapp.pluginsdir))
+        plugnplay.set_plugin_dirs(wsgidapp.pluginsdir)
+        plugnplay.load_plugins(logger = self.log)
 
         self.log.debug("Using configs values {cfg}".format(cfg=options))
         self.log.debug("Dropping privileges to: uid={uid}, gid={gid}".format(uid=daemon_options['uid'], gid=daemon_options['gid']))
@@ -109,8 +103,6 @@ class Cli(object):
     if not os.path.exists(path):
       os.mkdir(path, 0700)
 
-
-
   '''
     This is the SIGTERM handler of the master process.
     This method kills any worker left when master process is killed
@@ -154,7 +146,7 @@ class Cli(object):
 
   def _create_daemon_options(self, options):
     daemon = {'detach_process': not options.no_daemon}
-    daemon.update({ 'stdin': sys.stdin,
+    daemon.update({'stdin': sys.stdin,
                    'stdout': sys.stdout,
                    'stderr': sys.stderr})
     if options.no_daemon:
@@ -185,7 +177,6 @@ class Cli(object):
                        'uid': stat.st_uid,
                        'gid': stat.st_gid})
     return daemon
-
 
   def _normalize_path(self, options):
     if options.chroot:
@@ -227,7 +218,6 @@ class Cli(object):
     logger = get_main_logger()
     logger.setLevel(level)
 
-
     if options.chroot:
       log_path = os.path.join('/', 'logs/wsgid.log')
 
@@ -245,4 +235,3 @@ class Cli(object):
     logger.addHandler(console)
     self.log = logger
     set_main_logger(logger)
-

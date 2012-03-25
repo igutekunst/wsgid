@@ -16,6 +16,8 @@ App loaders are classes that knows how to load an specific WSGI app. WSGID comes
 
 As an app for each of this frameworks has a known structure, wsgid will try to discover the *best loader* for your app. The loaders are used in alphabetical order by the loader filename.
 
+.. _app-loader:
+
 Writing your App Loader
 ************************
 

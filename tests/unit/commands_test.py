@@ -49,6 +49,11 @@ class CommandInitTest(unittest.TestCase):
     self.init.run(self.opt)
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "app")), "Did not create app folder")
 
+  @patch('sys.stderr')
+  def test_create_plugins_dir(self, *args):
+    self.init.run(self.opt)
+    self.assertTrue(os.path.exists(os.path.join(APP_PATH, "plugins")), "Did not create app folder")
+
   '''
    Checks there is no problem if we run "init" on an already
    inited path
@@ -63,6 +68,7 @@ class CommandInitTest(unittest.TestCase):
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "pid")))
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "pid/master")))
     self.assertTrue(os.path.exists(os.path.join(APP_PATH, "pid/worker")))
+    self.assertTrue(os.path.exists(os.path.join(APP_PATH, "plugins")), "plugins dir should exist")
 
 class CommandConfigTest(unittest.TestCase):
 
@@ -74,7 +80,8 @@ class CommandConfigTest(unittest.TestCase):
     self.opt = FakeOptions(app_path=self.CLEAN_PATH, wsgi_app="app.frontends.wsgi.application",\
                       debug=True, no_daemon=True, workers=8, keep_alive=True, chroot=True,\
                       recv="tcp://127.0.0.1:7000", send="tcp://127.0.0.1:7001",\
-                      no_debug=False, no_chroot=False, no_keep_alive=False, mongrel2_chroot = '/var')
+                      no_debug=False, no_chroot=False, no_keep_alive=False, mongrel2_chroot = '/var',
+                      django=False)
 
     self.init.run(self.opt)
 
@@ -116,7 +123,8 @@ class CommandConfigTest(unittest.TestCase):
     opt = FakeOptions(app_path=self.CLEAN_PATH, wsgi_app="app.frontends.wsgi.application",\
                       debug=True, no_daemon=True, workers=8, keep_alive=True, chroot=True,\
                       recv="tcp://127.0.0.1:7000", send="tcp://127.0.0.1:7001",\
-                      no_debug=False, no_chroot=False, no_keep_alive=False, mongrel2_chroot = '/var/www')
+                      no_debug=False, no_chroot=False, no_keep_alive=False, mongrel2_chroot = '/var/www',
+                      django=True)
     self.config.run(opt)
     h = simplejson.loads(file(os.path.join(self.CLEAN_PATH, "wsgid.json"), "r+").read())
     self.assertEquals("app.frontends.wsgi.application", h['wsgi_app'])
@@ -128,6 +136,25 @@ class CommandConfigTest(unittest.TestCase):
     self.assertEquals("tcp://127.0.0.1:7000", h['recv'])
     self.assertEquals("tcp://127.0.0.1:7001", h['send'])
     self.assertEquals("/var/www", h['mongrel2_chroot'])
+    self.assertEquals("True", h['django'])
+
+  def test_validate_recv(self):
+    open(os.path.join(self.CLEAN_PATH, 'wsgid.json'), 'w+') #Clean any old config file created by other tests
+    opt = FakeOptions(app_path=self.CLEAN_PATH, wsgi_app="app.frontends.wsgi.application",\
+                      debug=True, no_daemon=True, workers=8, keep_alive=True, chroot=True,\
+                      recv="tcp//127.0.0.1:7000", send="tcp://127.0.0.1:7001",\
+                      no_debug=False, no_chroot=False, no_keep_alive=False, mongrel2_chroot = '/var/www',
+                      django=True)
+    self.assertRaises(Exception, self.config.run, opt)
+
+  def test_validate_send(self):
+    open(os.path.join(self.CLEAN_PATH, 'wsgid.json'), 'w+') #Clean any old config file created by other tests
+    opt = FakeOptions(app_path=self.CLEAN_PATH, wsgi_app="app.frontends.wsgi.application",\
+                      debug=True, no_daemon=True, workers=8, keep_alive=True, chroot=True,\
+                      recv="tcp://127.0.0.1:7000", send="tcp:/127.0.0.1:7001",\
+                      no_debug=False, no_chroot=False, no_keep_alive=False, mongrel2_chroot = '/var/www',
+                      django=True)
+    self.assertRaises(Exception, self.config.run, opt)
 
   '''
     the no_debug options is an extra option added by the config command
@@ -136,7 +163,8 @@ class CommandConfigTest(unittest.TestCase):
     opt = FakeOptions(app_path=self.CLEAN_PATH, wsgi_app="app.frontends.wsgi.application",\
                       no_debug=True, debug=True, workers=9, keep_alive=True, chroot=True,\
                       recv="tcp://127.0.0.1:7000", send="tcp://127.0.0.1:7001",
-                      no_chroot=False, no_keep_alive=False, no_daemon = False, mongrel2_chroot = '/var')
+                      no_chroot=False, no_keep_alive=False, no_daemon = False, mongrel2_chroot = '/var',
+                      django=False)
     self.config.run(opt)
     h = simplejson.loads(file(os.path.join(self.CLEAN_PATH, "wsgid.json"), "r+").read())
     self.assertEquals("app.frontends.wsgi.application", h['wsgi_app'])

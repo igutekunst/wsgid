@@ -17,6 +17,10 @@ app-path
 Path to the WSGI application. This should be the path where the code of your application is located. If the app is installed system wide, you don't need this.
 The directory that contains your application must obey some rules, please see :doc:`appstructure`.
 
+.. versionadded:: 0.6.0
+
+``--app-path`` is not mandatory anymore. If you omit it, wsgid will use the current working directory (as returned by ``os.getcwd()``) as your app path.
+
 wsgi-app
 ********
   ``--wsgi-app``
@@ -99,6 +103,7 @@ This option will make wsgid watch for its child processes. If any child process 
 
 mongrel2-chroot
 ***************
+  ``--mongrel2-chroot``
 
 .. versionadded:: 0.5.0
 
@@ -107,6 +112,14 @@ This option is used if you want to take advantage of mongrel2's async upload. Yo
 Since mongrel2 creates all temporary files relative to it's chroot, each wsgid instance handling requests from any mongrel2 server instance must know where this server is chrooted. This is necessary because wsgid needs to prepend this chroot path to the path mongrel2 creates the files.
 
 If this option is not set, wsgid will use the original path provided by mongrel2.
+
+django
+******
+  ``--django``
+
+.. versionadded:: 0.6.0
+
+This option forces wsgid to load your app as a django app. This allows you to have a more sophisticated django setup (for example: having a settings package instead of a ``settings.py`` module). To use this option all you have to ensure is that ``import myproj.settings`` works.  
 
 .. _json-config:
 
