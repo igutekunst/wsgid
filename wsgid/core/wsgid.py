@@ -8,6 +8,12 @@ from StringIO import StringIO
 import sys
 import os
 from .. import conf
+from .. import __version__
+
+
+X_WSGID_HEADER_NAME = 'X-Wsgid'
+x_wsgid_header_name = X_WSGID_HEADER_NAME.lower()
+X_WSGID_HEADER = '{header}: {version}\r\n'.format(header=X_WSGID_HEADER_NAME, version=__version__)
 
 
 class Wsgid(object):
@@ -109,9 +115,10 @@ class Wsgid(object):
         headers += [('Content-Length', len(body))]
         raw_headers = ""
         for h, v in headers:
-            raw_headers += "%s: %s\r\n" % (h, v)
+            if not h.lower() == x_wsgid_header_name:
+                raw_headers += "%s: %s\r\n" % (h, v)
 
-        params['headers'] = raw_headers
+        params['headers'] = raw_headers + X_WSGID_HEADER
         return msg + RAW_HTTP % params
 
     def _create_wsgi_environ(self, json_headers, body=None):

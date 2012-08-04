@@ -8,6 +8,7 @@ from wsgid.core.wsgid import Wsgid
 from wsgid.core.message import Message
 from wsgid.core.parser import parse_options
 import wsgid.conf as conf
+from wsgid import __version__
 import sys
 
 from mock import patch, Mock, MagicMock
@@ -363,7 +364,7 @@ class WsgidReplyTest(unittest.TestCase):
 
   def test_reply_no_headers(self):
     m2msg = self.wsgid._reply(self.sample_uuid, self.sample_conn_id, '200 OK', body='Hello World\n')
-    resp = "%s 2:42, HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n" % (self.sample_uuid)
+    resp = "%s 2:42, HTTP/1.1 200 OK\r\nContent-Length: 12\r\nX-Wsgid: %s\r\n\r\nHello World\n" % (self.sample_uuid, __version__)
     self.assertEquals(resp, m2msg)
 
   def test_reply_no_body(self):
@@ -372,7 +373,9 @@ class WsgidReplyTest(unittest.TestCase):
     resp = "%s 2:42, HTTP/1.1 200 OK\r\n\
 Header: Value\r\n\
 X-Other-Header: Other-Value\r\n\
-Content-Length: 0\r\n\r\n" % (self.sample_uuid)
+Content-Length: 0\r\n\
+X-Wsgid: %s\r\n\r\n" % (self.sample_uuid, __version__)
+
     self.assertEquals(resp, m2msg)
 
   def test_reply_with_body_andheaders(self):
@@ -382,8 +385,35 @@ Content-Length: 0\r\n\r\n" % (self.sample_uuid)
     resp = "%s 2:42, HTTP/1.1 200 OK\r\n\
 Header: Value\r\n\
 X-Other-Header: Other-Value\r\n\
-Content-Length: 12\r\n\r\n\
-Hello World\n" % (self.sample_uuid)
+Content-Length: 12\r\n\
+X-Wsgid: %s\r\n\r\n\
+Hello World\n" % (self.sample_uuid, __version__)
     self.assertEquals(resp, m2msg)
 
+  def test_add_x_wsgid_header(self):
+      headers = [('Header', 'Value'), ('X-Other-Header', 'Other-Value')]
+      body = "Hello World\n"
+      m2msg = self.wsgid._reply(self.sample_uuid, self.sample_conn_id, '200 OK', headers=headers, body=body)
+      resp = "%s 2:42, HTTP/1.1 200 OK\r\n\
+Header: Value\r\n\
+X-Other-Header: Other-Value\r\n\
+Content-Length: 12\r\n\
+X-Wsgid: %s\r\n\r\n\
+Hello World\n" % (self.sample_uuid, __version__)
+      assert resp == m2msg
 
+  """
+  If the WSGI app returns a X-WSGID header we must replace it.
+  X-WSGID is a reserved header name
+  """
+  def test_remove_any_x_wsgid_header(self):
+      headers = [('Header', 'Value'), ('X-Other-Header', 'Other-Value'), ('X-WSGID', 'Not-Permitted')]
+      body = "Hello World\n"
+      m2msg = self.wsgid._reply(self.sample_uuid, self.sample_conn_id, '200 OK', headers=headers, body=body)
+      resp = "%s 2:42, HTTP/1.1 200 OK\r\n\
+Header: Value\r\n\
+X-Other-Header: Other-Value\r\n\
+Content-Length: 12\r\n\
+X-Wsgid: %s\r\n\r\n\
+Hello World\n" % (self.sample_uuid, __version__)
+      self.assertEquals(resp, m2msg)
