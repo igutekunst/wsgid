@@ -3,15 +3,13 @@
 
 import unittest
 
-import zmq
-from wsgid.core.wsgid import Wsgid
-from wsgid.core.message import Message
+from wsgid.core import Wsgid
 from wsgid.core.parser import parse_options
 import wsgid.conf as conf
 from wsgid import __version__
 import sys
 
-from mock import patch, Mock, MagicMock
+from mock import patch, Mock
 
 class WsgidTest(unittest.TestCase):
 

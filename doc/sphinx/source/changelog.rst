@@ -2,6 +2,18 @@ Changelog
 =========
 
 
+Version 0.7.0
+*************
+
+ * Internal refactorings: Wsgid class moved from ``wsgid.core.wsgid`` to ``wsgid.core``, WsgidApp class moved from ``wsgid.core.wsgidapp`` to ``wsgid.core``;
+ * Wsgid now adds a fingerprint header to all responses: ``X-Wsgid: <version>``
+ * Update dependency: Now wsgid depends on `plugnplay-0.5.1`_.
+
+ * Commit log:  https://github.com/daltonmatos/wsgid/compare/v0.6.0...v0.7.0
+
+.. _plugnplay-0.5.1: https://github.com/daltonmatos/plugnplay
+
+
 Version 0.6.0
 *************
 
