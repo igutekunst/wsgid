@@ -137,6 +137,7 @@ class Wsgid(object):
         self.log.info("All set, ready to serve requests...")
         while True:
             m2message = Message(recv_sock.recv())
+            self.log.debug("Request arrived... headers={0}".format(m2message.headers))
 
             if m2message.is_disconnect():
                 self.log.debug("Disconnect message received, id=%s" % m2message.client_id)
@@ -147,6 +148,7 @@ class Wsgid(object):
                 continue
 
             # Call the app and send the response back to mongrel2
+            self.log.debug("Calling wsgi app...")
             self._call_wsgi_app(m2message, send_sock)
 
     def _call_wsgi_app(self, m2message, send_sock):
@@ -166,7 +168,9 @@ class Wsgid(object):
         response = None
         try:
             body = ''
+            self.log.debug("Waiting app to return...")
             response = self.app(environ, start_response)
+            self.log.debug("App finished running... status={0}, headers={1}".format(start_response.status, start_response.headers))
 
             if start_response.body_written:
                 body = start_response.body
@@ -176,6 +180,7 @@ class Wsgid(object):
 
             status = start_response.status
             headers = start_response.headers
+            self.log.debug("Returning to mongrel2")
             send_sock.send(str(self._reply(server_id, client_id, status, headers, body)))
         except Exception, e:
             # Internal Server Error
