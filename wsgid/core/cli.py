@@ -199,7 +199,7 @@ class Cli(object):
     return pid
 
   def _call_wsgid(self, options):
-    from wsgid import Wsgid
+    from wsgid.core import Wsgid
     from ..loaders import load_app
 
     # Create the env vars
