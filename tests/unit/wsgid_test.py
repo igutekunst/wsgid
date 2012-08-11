@@ -415,3 +415,21 @@ Content-Length: 12\r\n\
 X-Wsgid: %s\r\n\r\n\
 Hello World\n" % (self.sample_uuid, __version__)
       self.assertEquals(resp, m2msg)
+
+
+class WsgidRequestFiltersTest(unittest.TestCase):
+
+    def test_call_pre_request_filter(self):
+        self.fail()
+
+    def test_call_post_request_filter(self):
+        self.fail()
+
+    def test_call_post_request_exception(self):
+        self.fail()
+
+    def test_pass_wsgi_environ_through_pre_request_filters(self):
+        self.fail()
+
+    def test_pass_app_response_through_post_request_filters(self):
+        self.fail()
