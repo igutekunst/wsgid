@@ -11,6 +11,7 @@ import re
 import os
 from wsgid import __version__
 from wsgid import conf
+from wsgid.interfaces.filters import IPreRequestFilter
 from cStringIO import StringIO
 import urllib
 from message import Message
@@ -122,21 +123,22 @@ class Wsgid(object):
         self.ctx = zmq.Context()
         self.log = get_main_logger()
 
+        self.recv_sock = self.ctx.socket(zmq.PULL)
+        self.recv_sock.connect(self.recv)
+        self.log.debug("Using PULL socket %s" % self.recv)
+
+        self.send_sock = self.ctx.socket(zmq.PUB)
+        self.send_sock.connect(self.send)
+        self.log.debug("Using PUB socket %s" % self.send)
+
     def serve(self):
         '''
         Start serving requests.
         '''
-        recv_sock = self.ctx.socket(zmq.PULL)
-        recv_sock.connect(self.recv)
-        self.log.debug("Using PULL socket %s" % self.recv)
-
-        send_sock = self.ctx.socket(zmq.PUB)
-        send_sock.connect(self.send)
-        self.log.debug("Using PUB socket %s" % self.send)
 
         self.log.info("All set, ready to serve requests...")
         while True:
-            m2message = Message(recv_sock.recv())
+            m2message = Message(self.recv_sock.recv())
             self.log.debug("Request arrived... headers={0}".format(m2message.headers))
 
             if m2message.is_disconnect():
@@ -149,7 +151,7 @@ class Wsgid(object):
 
             # Call the app and send the response back to mongrel2
             self.log.debug("Calling wsgi app...")
-            self._call_wsgi_app(m2message, send_sock)
+            self._call_wsgi_app(m2message, self.send_sock)
 
     def _call_wsgi_app(self, m2message, send_sock):
         environ = self._create_wsgi_environ(m2message.headers, m2message.body)
@@ -169,6 +171,7 @@ class Wsgid(object):
         try:
             body = ''
             self.log.debug("Waiting app to return...")
+            IPreRequestFilter.process(m2message, environ)
             response = self.app(environ, start_response)
             self.log.debug("App finished running... status={0}, headers={1}".format(start_response.status, start_response.headers))
 

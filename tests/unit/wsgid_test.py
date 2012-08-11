@@ -3,13 +3,15 @@
 
 import unittest
 
-from wsgid.core import Wsgid
+from wsgid.core import Wsgid, Plugin
 from wsgid.core.parser import parse_options
+from wsgid.interfaces.filters import IPreRequestFilter
 import wsgid.conf as conf
 from wsgid import __version__
 import sys
+import simplejson
 
-from mock import patch, Mock
+from mock import patch, Mock, call, ANY
 
 class WsgidTest(unittest.TestCase):
 
@@ -417,9 +419,67 @@ Hello World\n" % (self.sample_uuid, __version__)
       self.assertEquals(resp, m2msg)
 
 
+class AlmostAlwaysTrue(object):
+
+    def __init__(self, total_iterations=1):
+        self.total_iterations = total_iterations
+        self.current_iteration = 0
+
+    def __nonzero__(self):
+        if self.current_iteration < self.total_iterations:
+            self.current_iteration += 1
+            return bool(1)
+        return bool(0)
+
+
 class WsgidRequestFiltersTest(unittest.TestCase):
 
+    def setUp(self):
+        self.sample_headers = {
+            'METHOD': 'GET',
+            'VERSION': 'HTTP/1.1',
+            'PATTERN': '/root',
+            'URI': '/more/path/',
+            'PATH': '/more/path',
+            'QUERY': 'a=1&b=4&d=4',
+            'host': 'localhost',
+            'content-length': '42',
+            'content-type': 'text/plain',
+            'x-forwarded-for': '127.0.0.1'
+            }
+        body = "Some body"
+        headers_str = simplejson.dumps(self.sample_headers)
+        self.raw_msg = "SID CID /path {len}:{h}:{lenb}:{b}".format(len=len(headers_str), h=headers_str, lenb=len(body), b=body)
+
     def test_call_pre_request_filter(self):
+        class SimpleFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                environ['X-Added-Header'] = 'Value'
+
+        with patch('zmq.Context') as ctx, \
+             patch('wsgid.conf.settings'):
+
+            ctx_m = Mock()
+            ctx.return_value = ctx_m
+
+            sock_mock = Mock()
+            ctx_m.socket.return_value = sock_mock
+            sock_mock.recv.return_value = self.raw_msg
+
+            app_mock = Mock()
+            wsgid = Wsgid(app=app_mock)
+            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock:
+
+                environ_mock.return_value = self.sample_headers.copy()
+                with patch('__builtin__.True', AlmostAlwaysTrue(1)):
+                    wsgid.serve()
+                expected_environ = self.sample_headers
+                expected_environ.update({'X-Added-Header': 'Value'})
+                assert [call(expected_environ, ANY)] == app_mock.call_args_list
+
+    def test_pass_modified_environ_to_app(self):
         self.fail()
 
     def test_call_post_request_filter(self):
