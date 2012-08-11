@@ -277,7 +277,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(return_value=['body response']))
@@ -294,7 +294,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(side_effect = Exception("Failed")))
@@ -310,7 +310,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(return_value = ['body response']))
@@ -325,7 +325,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(return_value = ['body response']))
