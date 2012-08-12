@@ -3,9 +3,9 @@
 import sys
 import logging
 import os
-import re
 
-from . import get_main_logger, set_main_logger, run_command, validate_input_params
+from . import run_command, validate_input_params, log
+import wsgid
 from ..commands import *
 import parser
 
@@ -22,7 +22,7 @@ class Cli(object):
   MASTER, WORKER = range(2)
 
   def __init__(self):
-    self.log = get_main_logger()
+    self.log = log
 
   def run(self):
     if run_command():
@@ -215,7 +215,7 @@ class Cli(object):
 
   def _set_loggers(self, options):
     level = logging.INFO if not options.debug else logging.DEBUG
-    logger = get_main_logger()
+    logger = log
     logger.setLevel(level)
 
     if options.chroot:
@@ -234,4 +234,4 @@ class Cli(object):
 
     logger.addHandler(console)
     self.log = logger
-    set_main_logger(logger)
+    wsgid.core.log = logger

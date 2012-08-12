@@ -1,15 +1,19 @@
 #encoding: utf-8
 
 
+from collections import namedtuple
 import unittest
 
-from wsgid.core import Wsgid
+from wsgid.core import Wsgid, Plugin
 from wsgid.core.parser import parse_options
+from wsgid.interfaces.filters import IPreRequestFilter, IPostRequestFilter
 import wsgid.conf as conf
 from wsgid import __version__
 import sys
+import simplejson
+import plugnplay
 
-from mock import patch, Mock
+from mock import patch, Mock, call, ANY
 
 class WsgidTest(unittest.TestCase):
 
@@ -277,7 +281,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(return_value=['body response']))
@@ -294,7 +298,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(side_effect = Exception("Failed")))
@@ -310,7 +314,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(return_value = ['body response']))
@@ -325,7 +329,7 @@ class WsgidTest(unittest.TestCase):
             def _serve_request(wsgid, m2message):
                 with patch.object(wsgid, '_create_wsgi_environ'):
                     wsgid._create_wsgi_environ.return_value = {}
-                    with patch("__builtin__.open") as mock_open:
+                    with patch("__builtin__.open"):
                         wsgid._call_wsgi_app(message, Mock())
 
             wsgid = Wsgid(app = Mock(return_value = ['body response']))
@@ -415,3 +419,269 @@ Content-Length: 12\r\n\
 X-Wsgid: %s\r\n\r\n\
 Hello World\n" % (self.sample_uuid, __version__)
       self.assertEquals(resp, m2msg)
+
+
+class AlmostAlwaysTrue(object):
+
+    def __init__(self, total_iterations=1):
+        self.total_iterations = total_iterations
+        self.current_iteration = 0
+
+    def __call__(self):
+        if self.current_iteration < self.total_iterations:
+            self.current_iteration += 1
+            return bool(1)
+        return bool(0)
+
+
+class WsgidRequestFiltersTest(unittest.TestCase):
+
+    def setUp(self):
+        self.sample_headers = {
+            'METHOD': 'GET',
+            'VERSION': 'HTTP/1.1',
+            'PATTERN': '/root',
+            'URI': '/more/path/',
+            'PATH': '/more/path',
+            'QUERY': 'a=1&b=4&d=4',
+            'host': 'localhost',
+            'content-length': '42',
+            'content-type': 'text/plain',
+            'x-forwarded-for': '127.0.0.1'
+            }
+        body = "Some body"
+        headers_str = simplejson.dumps(self.sample_headers)
+        self.raw_msg = "SID CID /path {len}:{h}:{lenb}:{b}".format(len=len(headers_str), h=headers_str, lenb=len(body), b=body)
+        plugnplay.man.iface_implementors = {}
+        conf.settings = namedtuple('object', 'mongrel2_chroot')
+        self.start_response_mock = namedtuple('object', ['body_written', 'status', 'headers'], verbose=False)
+
+    '''
+     This also tests if the modified environ is passed to the WSGI app
+    '''
+    def test_call_pre_request_filter(self):
+        class SimpleFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                environ['X-Added-Header'] = 'Value'
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)):
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            expected_environ = self.sample_headers
+            expected_environ.update({'X-Added-Header': 'Value'})
+            assert [call(expected_environ, ANY)] == app_mock.call_args_list
+
+    def test_filter_raises_exception_but_app_still_called(self):
+        class SimpleExceptionFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                raise Exception()
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)):
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            assert [call(self.sample_headers, ANY)] == app_mock.call_args_list
+
+    def test_call_other_filters_if_one_raises_exception(self):
+        class SimpleExceptionFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                raise Exception()
+
+        class SimpleFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                environ['X-New'] = 'Other Value'
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)):
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            expected_environ = self.sample_headers
+            expected_environ.update({'X-New': 'Other Value'})
+            assert [call(expected_environ, ANY)] == app_mock.call_args_list
+
+    def test_log_filter_exception(self):
+        exception = Exception()
+        class SimpleExceptionFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                raise exception
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch('wsgid.core.log') as mock_log:
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert [call(exception)] == mock_log.exception.call_args_list
+
+    def test_pass_wsgi_environ_through_pre_request_filters(self):
+        class AFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                environ['X-A'] = 'Header A'
+
+        class BFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, message, environ):
+                environ['X-B'] = 'Header B'
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)):
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            expected_environ = self.sample_headers
+            expected_environ.update({'X-A': 'Header A', 'X-B': 'Header B'})
+            assert [call(expected_environ, ANY)] == app_mock.call_args_list
+
+    def test_call_post_request_filter(self):
+        class PostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
+
+            def process(self, message, status, headers, body):
+                return ('200 OK from filter', headers + [('X-Post-Header', 'Value')], body)
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        app_mock.return_value = ('Line1', 'Line2')  # Response body lines
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch.object(wsgid, '_reply') as reply_mock:
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            assert [call('SID', 'CID', '200 OK from filter', [('X-Post-Header', 'Value')], 'Line1Line2')] == reply_mock.call_args_list
+
+    def test_call_post_request_exception(self):
+
+        filter_mock = Mock()
+        plugnplay.man.iface_implementors[IPostRequestFilter] = [filter_mock]
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock(side_effect=Exception())
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch.object(wsgid, '_reply'):
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == filter_mock.exception.call_count
+
+    def test_pass_app_response_through_post_request_filters(self):
+        class APostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
+
+            def process(self, message, status, headers, body):
+                return (status, headers, body + 'FA')
+
+        class BPostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
+
+            def process(self, message, status, headers, body):
+                return (status, headers, body + 'FB')
+
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        app_mock.return_value = ('Line1', 'Line2')  # Response body lines
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch.object(wsgid, '_reply') as reply_mock:
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            assert [call('SID', 'CID', '', [], 'Line1Line2FAFB')] == reply_mock.call_args_list
+
+    def test_ensure_a_broken_post_request_filter_does_not_crash_a_sucessful_request(self):
+        class APostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
+
+            def process(self, message, status, headers, body):
+                return (status, headers, body + 'FA')
+
+        class BPostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
+
+            def process(self, message, status, headers, body):
+                # Here we return a wrong tuple. wsgid must be able not to crash
+                # the request because of this
+                return (headers, body + 'FB')
+
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        app_mock.return_value = ('Line1', 'Line2')  # Response body lines
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch.object(wsgid, '_reply') as reply_mock:
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            assert [call('SID', 'CID', '', [], 'Line1Line2FA')] == reply_mock.call_args_list

@@ -2,12 +2,8 @@
 
 import plugnplay
 import os
-from ..core import Plugin, get_main_logger
+from ..core import Plugin, log
 import sys
-import logging
-
-
-log = get_main_logger()
 
 
 class IAppLoader(plugnplay.Interface):

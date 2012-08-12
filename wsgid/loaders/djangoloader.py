@@ -1,5 +1,5 @@
 from wsgid.loaders import IAppLoader
-from wsgid.core import Plugin, get_main_logger
+from wsgid.core import Plugin, log
 import wsgid.conf
 try:
     from django.conf import settings
@@ -9,9 +9,6 @@ except ImportError:
 import os
 import sys
 import simplejson
-
-
-log = get_main_logger()
 
 
 class DjangoAppLoader(Plugin):
@@ -48,7 +45,7 @@ class DjangoAppLoader(Plugin):
         return parsed
 
     def load_app(self, app_path, app_full_name=None):
-        logger = get_main_logger()
+        logger = log
         # Since we receive here --app-path + app/, we need to remove the last part
         # because django.json lives in --app-path
         wsgidapp_path = os.path.dirname(app_path)

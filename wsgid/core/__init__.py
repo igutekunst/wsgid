@@ -1,6 +1,6 @@
 #encoding: utf-8
 
-__all__ = ['StartResponse', 'StartResponseCalledTwice', 'Plugin', 'run_command', 'get_main_logger', 'validate_input_params', 'Wsgid']
+__all__ = ['StartResponse', 'StartResponseCalledTwice', 'Plugin', 'run_command', 'validate_input_params', 'Wsgid']
 
 import sys
 import logging
@@ -11,6 +11,7 @@ import re
 import os
 from wsgid import __version__
 from wsgid import conf
+from wsgid.interfaces.filters import IPreRequestFilter, IPostRequestFilter
 from cStringIO import StringIO
 import urllib
 from message import Message
@@ -19,6 +20,7 @@ from glob import glob
 
 
 Plugin = plugnplay.Plugin
+log = logging.getLogger('wsgid')
 
 
 class StartResponse(object):
@@ -55,17 +57,6 @@ class StartResponseCalledTwice(Exception):
     pass
 
 
-log = logging.getLogger('wsgid')
-
-
-def get_main_logger():
-    return log
-
-
-def set_main_logger(logger):
-    log = logger
-
-
 def run_command():
     '''
     Extract the first command line argument (if it exists)
@@ -88,6 +79,7 @@ def run_command():
 ZMQ_SOCKET_SPEC = re.compile("(?P<proto>inproc|ipc|tcp|pgm|epgm)://(?P<address>.*)$")
 TCP_SOCKET_SPEC = re.compile("(?P<adress>.*):(?P<port>[0-9]+)")
 
+
 def _is_valid_socket(sockspec):
     generic_match = ZMQ_SOCKET_SPEC.match(sockspec)
     if generic_match:
@@ -97,6 +89,7 @@ def _is_valid_socket(sockspec):
         else:
             return True
     return False
+
 
 def validate_input_params(app_path=None, recv=None, send=None):
     if app_path and not os.path.exists(app_path):
@@ -120,12 +113,9 @@ class Wsgid(object):
         self.send = send
 
         self.ctx = zmq.Context()
-        self.log = get_main_logger()
+        self.log = log
 
-    def serve(self):
-        '''
-        Start serving requests.
-        '''
+    def _setup_zmq_endpoints(self):
         recv_sock = self.ctx.socket(zmq.PULL)
         recv_sock.connect(self.recv)
         self.log.debug("Using PULL socket %s" % self.recv)
@@ -133,9 +123,17 @@ class Wsgid(object):
         send_sock = self.ctx.socket(zmq.PUB)
         send_sock.connect(self.send)
         self.log.debug("Using PUB socket %s" % self.send)
+        return (send_sock, recv_sock)
 
+    def serve(self):
+        '''
+        Start serving requests.
+        '''
+        self.log.debug("Setting up ZMQ endpoints")
+        send_sock, recv_sock = self._setup_zmq_endpoints()
         self.log.info("All set, ready to serve requests...")
-        while True:
+        while self._should_serve():
+            self.log.debug("Serving requests...")
             m2message = Message(recv_sock.recv())
             self.log.debug("Request arrived... headers={0}".format(m2message.headers))
 
@@ -148,8 +146,14 @@ class Wsgid(object):
                 continue
 
             # Call the app and send the response back to mongrel2
-            self.log.debug("Calling wsgi app...")
             self._call_wsgi_app(m2message, send_sock)
+
+    '''
+     This method exists just to me mocked in the tests.
+     It is simply too unpredictable to mock the True object
+    '''
+    def _should_serve(self):
+        return True
 
     def _call_wsgi_app(self, m2message, send_sock):
         environ = self._create_wsgi_environ(m2message.headers, m2message.body)
@@ -168,9 +172,12 @@ class Wsgid(object):
         response = None
         try:
             body = ''
-            self.log.debug("Waiting app to return...")
+            self.log.debug("Calling PreRequest filters...")
+            self._run_simple_filters(IPreRequestFilter.implementors(), self._filter_process_callback, m2message, environ)
+
+            self.log.debug("Waiting for the WSGI app to return...")
             response = self.app(environ, start_response)
-            self.log.debug("App finished running... status={0}, headers={1}".format(start_response.status, start_response.headers))
+            self.log.debug("WSGI app finished running... status={0}, headers={1}".format(start_response.status, start_response.headers))
 
             if start_response.body_written:
                 body = start_response.body
@@ -180,10 +187,15 @@ class Wsgid(object):
 
             status = start_response.status
             headers = start_response.headers
+
+            self.log.debug("Calling PostRequest filters...")
+            (status, headers, body) = self._run_post_filters(IPostRequestFilter.implementors(), self._filter_process_callback, m2message, status, headers, body)
+
             self.log.debug("Returning to mongrel2")
             send_sock.send(str(self._reply(server_id, client_id, status, headers, body)))
         except Exception, e:
             # Internal Server Error
+            self._run_simple_filters(IPostRequestFilter.implementors(), self._filter_exception_callback, m2message, e)
             send_sock.send(self._reply(server_id, client_id, '500 Internal Server Error', headers=[]))
             self.log.exception(e)
         finally:
@@ -191,6 +203,40 @@ class Wsgid(object):
                 response.close()
             if m2message.is_upload_done():
                 self._remove_tmp_file(upload_path)
+
+    def _filter_exception_callback(self, f, *args):
+        f.exception(*args)
+
+    def _filter_process_callback(self, f, *args):
+        return f.process(*args)
+
+    '''
+     Run post request filters
+     This method is separated because the post request filter should return a value that will
+     be passed to the next filter in the execution chain
+    '''
+    def _run_post_filters(self, filters, callback, m2message, *filter_args):
+        status, headers, body = filter_args
+        for f in filters:
+            try:
+                self.log.debug("Calling {0} filter".format(f.__class__.__name__))
+                status, headers, body = callback(f, m2message, status, headers, body)
+            except Exception as e:
+                from wsgid.core import log
+                log.exception(e)
+        return (status, headers, body)
+
+    '''
+     Run pre request filters
+    '''
+    def _run_simple_filters(self, filters, callback, m2message, *filter_args):
+        for f in filters:
+            try:
+                self.log.debug("Calling {0} filter".format(f.__class__.__name__))
+                callback(f, m2message, *filter_args)
+            except Exception as e:
+                from wsgid.core import log
+                log.exception(e)
 
     def _remove_tmp_file(self, filepath):
         try:
