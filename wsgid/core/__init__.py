@@ -177,7 +177,7 @@ class Wsgid(object):
         try:
             body = ''
 
-            self._run_filters(IPreRequestFilter, m2message, environ)
+            self._run_filters(IPreRequestFilter.implementors(), self._filter_process_callback, m2message, environ)
 
             self.log.debug("Waiting app to return...")
             response = self.app(environ, start_response)
@@ -192,7 +192,7 @@ class Wsgid(object):
             status = start_response.status
             headers = start_response.headers
 
-            self._run_filters(IPostRequestFilter, m2message, status, body, headers)
+            self._run_filters(IPostRequestFilter.implementors(), self._filter_process_callback, m2message, status, body, headers)
 
             self.log.debug("Returning to mongrel2")
             send_sock.send(str(self._reply(server_id, client_id, status, headers, body)))
@@ -206,13 +206,16 @@ class Wsgid(object):
             if m2message.is_upload_done():
                 self._remove_tmp_file(upload_path)
 
+    def _filter_process_callback(self, f, *args):
+        return f.process(*args)
+
     '''
      Run any type of filter
     '''
-    def _run_filters(self, filter_class, *filter_args):
-        for f in filter_class.implementors():
+    def _run_filters(self, filters, callback, *filter_args):
+        for f in filters:
             try:
-                f.process(*filter_args)
+                callback(f, *filter_args)
             except Exception as e:
                 from wsgid.core import log
                 log.exception(e)

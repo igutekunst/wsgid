@@ -563,7 +563,7 @@ class WsgidRequestFiltersTest(unittest.TestCase):
         class BFilter(Plugin):
             implements = [IPreRequestFilter, ]
 
-            def process(self, messaage, environ):
+            def process(self, message, environ):
                 environ['X-B'] = 'Header B'
 
         sock_mock = Mock()
@@ -587,7 +587,7 @@ class WsgidRequestFiltersTest(unittest.TestCase):
             implements = [IPostRequestFilter, ]
 
             def process(self, messaage, status, body, headers):
-                headers['X-Time'] = 'now'
+                pass
 
         sock_mock = Mock()
         sock_mock.recv.return_value = self.raw_msg
@@ -604,7 +604,7 @@ class WsgidRequestFiltersTest(unittest.TestCase):
             wsgid.serve()
             assert 1 == app_mock.call_count
             assert 2 == run_filters.call_count
-            assert call(IPostRequestFilter, ANY, ANY, ANY, ANY) == run_filters.call_args_list[1]
+            assert call(plugnplay.man.iface_implementors[IPostRequestFilter], ANY, ANY, ANY, ANY, ANY) == run_filters.call_args_list[1]
 
     def test_call_post_request_exception(self):
         self.fail()
