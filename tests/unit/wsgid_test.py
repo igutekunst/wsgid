@@ -425,7 +425,7 @@ class AlmostAlwaysTrue(object):
         self.total_iterations = total_iterations
         self.current_iteration = 0
 
-    def __nonzero__(self):
+    def __call__(self):
         if self.current_iteration < self.total_iterations:
             self.current_iteration += 1
             return bool(1)
@@ -461,23 +461,19 @@ class WsgidRequestFiltersTest(unittest.TestCase):
             def process(self, messaage, environ):
                 environ['X-Added-Header'] = 'Value'
 
-        with patch('zmq.Context') as ctx, \
-             patch('wsgid.conf.settings'):
-
-            ctx_m = Mock()
-            ctx.return_value = ctx_m
+        with patch('wsgid.conf.settings'):
 
             sock_mock = Mock()
-            ctx_m.socket.return_value = sock_mock
             sock_mock.recv.return_value = self.raw_msg
 
             app_mock = Mock()
             wsgid = Wsgid(app=app_mock)
-            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock:
+            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                 patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                 patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)):
 
                 environ_mock.return_value = self.sample_headers.copy()
-                with patch('__builtin__.True', AlmostAlwaysTrue(1)):
-                    wsgid.serve()
+                wsgid.serve()
                 expected_environ = self.sample_headers
                 expected_environ.update({'X-Added-Header': 'Value'})
                 assert [call(expected_environ, ANY)] == app_mock.call_args_list
@@ -489,23 +485,19 @@ class WsgidRequestFiltersTest(unittest.TestCase):
             def process(self, messaage, environ):
                 raise Exception()
 
-        with patch('zmq.Context') as ctx, \
-             patch('wsgid.conf.settings'):
-
-            ctx_m = Mock()
-            ctx.return_value = ctx_m
+        with patch('wsgid.conf.settings'):
 
             sock_mock = Mock()
-            ctx_m.socket.return_value = sock_mock
             sock_mock.recv.return_value = self.raw_msg
 
             app_mock = Mock()
             wsgid = Wsgid(app=app_mock)
-            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock:
+            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                 patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                 patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)):
 
                 environ_mock.return_value = self.sample_headers.copy()
-                with patch('__builtin__.True', AlmostAlwaysTrue(1)):
-                    wsgid.serve()
+                wsgid.serve()
                 assert 1 == app_mock.call_count
                 assert [call(self.sample_headers, ANY)] == app_mock.call_args_list
 
@@ -523,27 +515,26 @@ class WsgidRequestFiltersTest(unittest.TestCase):
                 environ['X-New'] = 'Other Value'
 
 
-        with patch('zmq.Context') as ctx, \
-             patch('wsgid.conf.settings'):
-
-            ctx_m = Mock()
-            ctx.return_value = ctx_m
+        with patch('wsgid.conf.settings'):
 
             sock_mock = Mock()
-            ctx_m.socket.return_value = sock_mock
             sock_mock.recv.return_value = self.raw_msg
 
             app_mock = Mock()
             wsgid = Wsgid(app=app_mock)
-            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock:
+            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                 patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                 patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)):
 
                 environ_mock.return_value = self.sample_headers.copy()
-                with patch('__builtin__.True', AlmostAlwaysTrue(1)):
-                    wsgid.serve()
+                wsgid.serve()
                 assert 1 == app_mock.call_count
                 expected_environ = self.sample_headers
                 expected_environ.update({'X-New': 'Other Value'})
                 assert [call(expected_environ, ANY)] == app_mock.call_args_list
+
+    def test_log_filter_exception(self):
+        self.fail()
 
     def test_call_post_request_filter(self):
         self.fail()
