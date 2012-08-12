@@ -221,15 +221,15 @@ class Wsgid(object):
      be passed to the next filter in the execution chain
     '''
     def _run_post_filters(self, filters, callback, m2message, *filter_args):
-        r = filter_args
+        status, headers, body = filter_args
         for f in filters:
             try:
                 self.log.debug("Calling {0} filter".format(f.__class__.__name__))
-                r = callback(f, m2message, *r)
+                status, headers, body = callback(f, m2message, status, headers, body)
             except Exception as e:
                 from wsgid.core import log
                 log.exception(e)
-        return r
+        return (status, headers, body)
 
     '''
      Run pre request filters
