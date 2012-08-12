@@ -451,6 +451,9 @@ class WsgidRequestFiltersTest(unittest.TestCase):
         headers_str = simplejson.dumps(self.sample_headers)
         self.raw_msg = "SID CID /path {len}:{h}:{lenb}:{b}".format(len=len(headers_str), h=headers_str, lenb=len(body), b=body)
 
+    '''
+     This also tests if the modified environ is passed to the WSGI app
+    '''
     def test_call_pre_request_filter(self):
         class SimpleFilter(Plugin):
             implements = [IPreRequestFilter, ]
@@ -479,8 +482,68 @@ class WsgidRequestFiltersTest(unittest.TestCase):
                 expected_environ.update({'X-Added-Header': 'Value'})
                 assert [call(expected_environ, ANY)] == app_mock.call_args_list
 
-    def test_pass_modified_environ_to_app(self):
-        self.fail()
+    def test_filter_raises_exception_but_app_still_called(self):
+        class SimpleExceptionFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                raise Exception()
+
+        with patch('zmq.Context') as ctx, \
+             patch('wsgid.conf.settings'):
+
+            ctx_m = Mock()
+            ctx.return_value = ctx_m
+
+            sock_mock = Mock()
+            ctx_m.socket.return_value = sock_mock
+            sock_mock.recv.return_value = self.raw_msg
+
+            app_mock = Mock()
+            wsgid = Wsgid(app=app_mock)
+            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock:
+
+                environ_mock.return_value = self.sample_headers.copy()
+                with patch('__builtin__.True', AlmostAlwaysTrue(1)):
+                    wsgid.serve()
+                assert 1 == app_mock.call_count
+                assert [call(self.sample_headers, ANY)] == app_mock.call_args_list
+
+    def test_call_other_filters_if_one_raises_exception(self):
+        class SimpleExceptionFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                raise Exception()
+
+        class SimpleFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                environ['X-New'] = 'Other Value'
+
+
+        with patch('zmq.Context') as ctx, \
+             patch('wsgid.conf.settings'):
+
+            ctx_m = Mock()
+            ctx.return_value = ctx_m
+
+            sock_mock = Mock()
+            ctx_m.socket.return_value = sock_mock
+            sock_mock.recv.return_value = self.raw_msg
+
+            app_mock = Mock()
+            wsgid = Wsgid(app=app_mock)
+            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock:
+
+                environ_mock.return_value = self.sample_headers.copy()
+                with patch('__builtin__.True', AlmostAlwaysTrue(1)):
+                    wsgid.serve()
+                assert 1 == app_mock.call_count
+                expected_environ = self.sample_headers
+                expected_environ.update({'X-New': 'Other Value'})
+                assert [call(expected_environ, ANY)] == app_mock.call_args_list
 
     def test_call_post_request_filter(self):
         self.fail()

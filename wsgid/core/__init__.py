@@ -170,8 +170,14 @@ class Wsgid(object):
         response = None
         try:
             body = ''
+
+            for pre in IPreRequestFilter.implementors():
+                try:
+                    pre.process(m2message, environ)
+                except:
+                    pass
+
             self.log.debug("Waiting app to return...")
-            IPreRequestFilter.process(m2message, environ)
             response = self.app(environ, start_response)
             self.log.debug("App finished running... status={0}, headers={1}".format(start_response.status, start_response.headers))
 
