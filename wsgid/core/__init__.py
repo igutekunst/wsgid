@@ -237,11 +237,11 @@ class Wsgid(object):
     def _run_simple_filters(self, filters, callback, m2message, *filter_args):
         for f in filters:
             try:
+                self.log.debug("Calling {0} filter".format(f.__class__.__name__))
                 callback(f, m2message, *filter_args)
             except Exception as e:
                 from wsgid.core import log
                 log.exception(e)
-
 
     def _remove_tmp_file(self, filepath):
         try:
