@@ -11,7 +11,7 @@ import re
 import os
 from wsgid import __version__
 from wsgid import conf
-from wsgid.interfaces.filters import IPreRequestFilter
+from wsgid.interfaces.filters import IPreRequestFilter, IPostRequestFilter
 from cStringIO import StringIO
 import urllib
 from message import Message
@@ -191,6 +191,9 @@ class Wsgid(object):
 
             status = start_response.status
             headers = start_response.headers
+
+            self._run_filters(IPostRequestFilter, m2message, status, body, headers)
+
             self.log.debug("Returning to mongrel2")
             send_sock.send(str(self._reply(server_id, client_id, status, headers, body)))
         except Exception, e:

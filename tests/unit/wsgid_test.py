@@ -6,7 +6,7 @@ import unittest
 
 from wsgid.core import Wsgid, Plugin
 from wsgid.core.parser import parse_options
-from wsgid.interfaces.filters import IPreRequestFilter
+from wsgid.interfaces.filters import IPreRequestFilter, IPostRequestFilter
 import wsgid.conf as conf
 from wsgid import __version__
 import sys
@@ -454,6 +454,7 @@ class WsgidRequestFiltersTest(unittest.TestCase):
         self.raw_msg = "SID CID /path {len}:{h}:{lenb}:{b}".format(len=len(headers_str), h=headers_str, lenb=len(body), b=body)
         plugnplay.man.iface_implementors = {}
         conf.settings = namedtuple('object', 'mongrel2_chroot')
+        self.start_response_mock = namedtuple('object', ['body_written', 'status', 'headers'], verbose=False)
 
     '''
      This also tests if the modified environ is passed to the WSGI app
@@ -582,11 +583,34 @@ class WsgidRequestFiltersTest(unittest.TestCase):
             assert [call(expected_environ, ANY)] == app_mock.call_args_list
 
     def test_call_post_request_filter(self):
-        self.fail()
+        class PostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
+
+            def process(self, messaage, status, body, headers):
+                headers['X-Time'] = 'now'
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        app_mock.return_value = ('Line1', 'Line2')  # Response body lines
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch.object(wsgid, '_run_filters') as run_filters:
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            assert 2 == run_filters.call_count
+            assert call(IPostRequestFilter, ANY, ANY, ANY, ANY) == run_filters.call_args_list[1]
 
     def test_call_post_request_exception(self):
         self.fail()
 
-
     def test_pass_app_response_through_post_request_filters(self):
+        self.fail()
+
+    def test_return_modified_values_to_mongrel2(self):
         self.fail()
