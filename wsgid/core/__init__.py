@@ -1,6 +1,6 @@
 #encoding: utf-8
 
-__all__ = ['StartResponse', 'StartResponseCalledTwice', 'Plugin', 'run_command', 'get_main_logger', 'validate_input_params', 'Wsgid']
+__all__ = ['StartResponse', 'StartResponseCalledTwice', 'Plugin', 'run_command', 'validate_input_params', 'Wsgid']
 
 import sys
 import logging
@@ -20,6 +20,7 @@ from glob import glob
 
 
 Plugin = plugnplay.Plugin
+log = logging.getLogger('wsgid')
 
 
 class StartResponse(object):
@@ -56,13 +57,6 @@ class StartResponseCalledTwice(Exception):
     pass
 
 
-log = logging.getLogger('wsgid')
-
-
-def get_main_logger():
-    return log
-
-
 def run_command():
     '''
     Extract the first command line argument (if it exists)
@@ -85,6 +79,7 @@ def run_command():
 ZMQ_SOCKET_SPEC = re.compile("(?P<proto>inproc|ipc|tcp|pgm|epgm)://(?P<address>.*)$")
 TCP_SOCKET_SPEC = re.compile("(?P<adress>.*):(?P<port>[0-9]+)")
 
+
 def _is_valid_socket(sockspec):
     generic_match = ZMQ_SOCKET_SPEC.match(sockspec)
     if generic_match:
@@ -94,6 +89,7 @@ def _is_valid_socket(sockspec):
         else:
             return True
     return False
+
 
 def validate_input_params(app_path=None, recv=None, send=None):
     if app_path and not os.path.exists(app_path):
@@ -117,8 +113,7 @@ class Wsgid(object):
         self.send = send
 
         self.ctx = zmq.Context()
-        self.log = get_main_logger()
-
+        self.log = log
 
     def _setup_zmq_endpoints(self):
         recv_sock = self.ctx.socket(zmq.PULL)

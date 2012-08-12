@@ -1,5 +1,5 @@
 
-from wsgid.core import Plugin, get_main_logger as logger, WsgidApp
+from wsgid.core import Plugin, log as logger, WsgidApp
 from wsgid.core.command import ICommand
 from wsgid.core.parser import INT, CommandLineOption
 import os
@@ -34,23 +34,23 @@ class CommandManage(Plugin):
 
     def _stop(self, options):
         wsgidapp = WsgidApp(options.app_path)
-        logger().info("Stopping master processes at {0}...".format(options.app_path))
+        logger.info("Stopping master processes at {0}...".format(options.app_path))
         pids = wsgidapp.master_pids()
         self._kill_pids(pids, options.send_signal, 'master')
 
     def _restart(self, options):
         wsgidapp = WsgidApp(options.app_path)
-        logger().info("Restarting worker processes at {0}...".format(options.app_path))
+        logger.info("Restarting worker processes at {0}...".format(options.app_path))
         pids = wsgidapp.worker_pids()
         self._kill_pids(pids, options.send_signal, 'worker')
 
     def _kill_pids(self, pids, signum, pidtype):
         for pidnumber in pids:
-            logger().debug("Sending signal {sig} to {pidtype} pid={pid}".format(pid=pidnumber, sig=signum, pidtype=pidtype))
+            logger.debug("Sending signal {sig} to {pidtype} pid={pid}".format(pid=pidnumber, sig=signum, pidtype=pidtype))
             self._sigkill(pidnumber, signum)
 
     def _sigkill(self, pid, signum):
         try:
             os.kill(pid, signum)
         except:
-            logger().debug("Non existant pid {0}".format(pid))
+            logger.debug("Non existant pid {0}".format(pid))
