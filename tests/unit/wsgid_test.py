@@ -10,6 +10,7 @@ import wsgid.conf as conf
 from wsgid import __version__
 import sys
 import simplejson
+import plugnplay
 
 from mock import patch, Mock, call, ANY
 
@@ -450,6 +451,7 @@ class WsgidRequestFiltersTest(unittest.TestCase):
         body = "Some body"
         headers_str = simplejson.dumps(self.sample_headers)
         self.raw_msg = "SID CID /path {len}:{h}:{lenb}:{b}".format(len=len(headers_str), h=headers_str, lenb=len(body), b=body)
+        plugnplay.man.iface_implementors = {}
 
     '''
      This also tests if the modified environ is passed to the WSGI app
