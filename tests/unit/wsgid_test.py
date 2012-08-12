@@ -609,7 +609,30 @@ class WsgidRequestFiltersTest(unittest.TestCase):
         self.fail()
 
     def test_pass_app_response_through_post_request_filters(self):
-        self.fail()
+        class APostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
 
-    def test_return_modified_values_to_mongrel2(self):
-        self.fail()
+            def process(self, message, status, headers, body):
+                return (status, headers, body + 'FA')
+        class BPostRequestFilter(Plugin):
+            implements = [IPostRequestFilter, ]
+
+            def process(self, message, status, headers, body):
+                return (status, headers, body + 'FB')
+
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        app_mock.return_value = ('Line1', 'Line2')  # Response body lines
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch.object(wsgid, '_reply') as reply_mock:
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == app_mock.call_count
+            assert [call('SID', 'CID', '', [], 'Line1Line2FAFB')] == reply_mock.call_args_list
