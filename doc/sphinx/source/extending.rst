@@ -33,14 +33,14 @@ IPostRequestFilter
 
 Invoked after the WSGI application has returned its response. Receives also a copy of the raw mongrel2 message and additionally receives all values returned by the WSGI application. The HTTP status line, the generated response body and the headers (returned as a list of tuples, eg: ``[(<header-name>, <header-value>), ...])``.
 
-This filter should always return a tuple containing the status line, the response body and the list of tuples (the headers). Even if you don't modify any value you must return them. This tuple will be expanded and will be passed to the next filter in the running chain.
+This filter should always return a tuple: (status, headers, body). Even if you don't modify any value you must return them. This tuple will be expanded and will be passed to the next filter in the running chain.
 
 If the WSGI application raises any Exception, the ``exception()`` method will be called receiving the raw mongrel2 message and a copy of the raised Exception. ::
 
 
     def IPostRequestFilter(plugnplay.Interface):
 
-        def process(self, m2message, status, body, headers):
+        def process(self, m2message, status, headers, body):
             pass
 
         def exception(self, m2message, e):
