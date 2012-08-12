@@ -31,7 +31,9 @@ You can modify the WSGI environ freely, the modified version will be passed to t
 IPostRequestFilter
 ^^^^^^^^^^^^^^^^^^
 
-Invoked after the WSGI application has returned its response. Receives also a copy of the raw mongrel2 message and additionally receives all values returned by the WSGI application. The HTTP status line, the generated response body and the headers (returned as a list of tuples, eg: ``[(<header-name>, <header-value>), ...])``
+Invoked after the WSGI application has returned its response. Receives also a copy of the raw mongrel2 message and additionally receives all values returned by the WSGI application. The HTTP status line, the generated response body and the headers (returned as a list of tuples, eg: ``[(<header-name>, <header-value>), ...])``.
+
+This filter should always return a tuple containing the status line, the response body and the list of tuples (the headers). Even if you don't modify any value you must return them. This tuple will be expanded and will be passed to the next filter in the running chain.
 
 If the WSGI application raises any Exception, the ``exception()`` method will be called receiving the raw mongrel2 message and a copy of the raised Exception. ::
 

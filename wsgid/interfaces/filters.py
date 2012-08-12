@@ -13,6 +13,10 @@ class IPreRequestFilter(plugnplay.Interface):
 
 class IPostRequestFilter(plugnplay.Interface):
 
+    '''
+     Should always return a tuple of the form: (status, body, headers)
+     even if it does not modify any of the values
+    '''
     def process(self, m2message, status, body, heders):
         pass
 
