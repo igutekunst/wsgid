@@ -536,7 +536,28 @@ class WsgidRequestFiltersTest(unittest.TestCase):
                 assert [call(expected_environ, ANY)] == app_mock.call_args_list
 
     def test_log_filter_exception(self):
-        self.fail()
+        exception = Exception()
+        class SimpleExceptionFilter(Plugin):
+            implements = [IPreRequestFilter, ]
+
+            def process(self, messaage, environ):
+                raise exception
+
+        with patch('wsgid.conf.settings'):
+
+            sock_mock = Mock()
+            sock_mock.recv.return_value = self.raw_msg
+
+            app_mock = Mock()
+            wsgid = Wsgid(app=app_mock)
+            with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                 patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                 patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                 patch('wsgid.core.log') as mock_log:
+
+                environ_mock.return_value = self.sample_headers.copy()
+                wsgid.serve()
+                assert [call(exception)] == mock_log.exception.call_args_list
 
     def test_call_post_request_filter(self):
         self.fail()

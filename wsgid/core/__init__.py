@@ -179,8 +179,9 @@ class Wsgid(object):
             for pre in IPreRequestFilter.implementors():
                 try:
                     pre.process(m2message, environ)
-                except:
-                    pass
+                except Exception as e:
+                    from wsgid.core import log
+                    log.exception(e)
 
             self.log.debug("Waiting app to return...")
             response = self.app(environ, start_response)
