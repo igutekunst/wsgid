@@ -177,7 +177,7 @@ class Wsgid(object):
         try:
             body = ''
 
-            self._run_filters(IPreRequestFilter.implementors(), self._filter_process_callback, m2message, environ)
+            self._run_pre_filters(IPreRequestFilter.implementors(), self._filter_process_callback, m2message, environ)
 
             self.log.debug("Waiting app to return...")
             response = self.app(environ, start_response)
@@ -192,12 +192,14 @@ class Wsgid(object):
             status = start_response.status
             headers = start_response.headers
 
-            self._run_filters(IPostRequestFilter.implementors(), self._filter_process_callback, m2message, status, body, headers)
+            (status, headers, body) = self._run_post_filters(IPostRequestFilter.implementors(), self._filter_process_callback, m2message, status, headers, body)
 
             self.log.debug("Returning to mongrel2")
             send_sock.send(str(self._reply(server_id, client_id, status, headers, body)))
         except Exception, e:
             # Internal Server Error
+            import traceback
+            print traceback.format_exc()
             send_sock.send(self._reply(server_id, client_id, '500 Internal Server Error', headers=[]))
             self.log.exception(e)
         finally:
@@ -210,12 +212,25 @@ class Wsgid(object):
         return f.process(*args)
 
     '''
-     Run any type of filter
+     Run post request filters
     '''
-    def _run_filters(self, filters, callback, *filter_args):
+    def _run_post_filters(self, filters, callback, m2message, *filter_args):
+        r = filter_args
         for f in filters:
             try:
-                callback(f, *filter_args)
+                r = callback(f, m2message, *r)
+            except Exception as e:
+                from wsgid.core import log
+                log.exception(e)
+        return r
+
+    '''
+     Run pre request filters
+    '''
+    def _run_pre_filters(self, filters, callback, m2message, *filter_args):
+        for f in filters:
+            try:
+                callback(f, m2message, *filter_args)
             except Exception as e:
                 from wsgid.core import log
                 log.exception(e)
