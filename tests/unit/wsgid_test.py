@@ -606,7 +606,24 @@ class WsgidRequestFiltersTest(unittest.TestCase):
             assert [call('SID', 'CID', '200 OK from filter', [('X-Post-Header', 'Value')], 'Line1Line2')] == reply_mock.call_args_list
 
     def test_call_post_request_exception(self):
-        self.fail()
+
+        filter_mock = Mock()
+        plugnplay.man.iface_implementors[IPostRequestFilter] = [filter_mock]
+
+        sock_mock = Mock()
+        sock_mock.recv.return_value = self.raw_msg
+
+        app_mock = Mock()
+        app_mock.return_value = ('Line1', 'Line2')  # Response body lines
+        wsgid = Wsgid(app=app_mock)
+        with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
+                patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
+                patch.object(wsgid, '_should_serve', AlmostAlwaysTrue(1)), \
+                patch.object(wsgid, '_reply'):
+
+            environ_mock.return_value = self.sample_headers.copy()
+            wsgid.serve()
+            assert 1 == filter_mock.exception.call_count
 
     def test_pass_app_response_through_post_request_filters(self):
         class APostRequestFilter(Plugin):

@@ -198,6 +198,7 @@ class Wsgid(object):
             send_sock.send(str(self._reply(server_id, client_id, status, headers, body)))
         except Exception, e:
             # Internal Server Error
+            self._run_simple_filters(IPostRequestFilter.implementors(), self._filter_exception_callback, m2message, e)
             send_sock.send(self._reply(server_id, client_id, '500 Internal Server Error', headers=[]))
             self.log.exception(e)
         finally:
@@ -205,6 +206,9 @@ class Wsgid(object):
                 response.close()
             if m2message.is_upload_done():
                 self._remove_tmp_file(upload_path)
+
+    def _filter_exception_callback(self, f, *args):
+        f.exception(*args)
 
     def _filter_process_callback(self, f, *args):
         return f.process(*args)
