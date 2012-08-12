@@ -176,12 +176,8 @@ class Wsgid(object):
         response = None
         try:
             body = ''
-            for pre in IPreRequestFilter.implementors():
-                try:
-                    pre.process(m2message, environ)
-                except Exception as e:
-                    from wsgid.core import log
-                    log.exception(e)
+
+            self._run_filters(IPreRequestFilter, m2message, environ)
 
             self.log.debug("Waiting app to return...")
             response = self.app(environ, start_response)
@@ -206,6 +202,18 @@ class Wsgid(object):
                 response.close()
             if m2message.is_upload_done():
                 self._remove_tmp_file(upload_path)
+
+    '''
+     Run any type of filter
+    '''
+    def _run_filters(self, filter_class, *filter_args):
+        for f in filter_class.implementors():
+            try:
+                f.process(*filter_args)
+            except Exception as e:
+                from wsgid.core import log
+                log.exception(e)
+
 
     def _remove_tmp_file(self, filepath):
         try:
