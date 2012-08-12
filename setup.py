@@ -12,7 +12,7 @@ setup(
   author="Dalton Barreto",
   author_email="daltonmatos@gmail.com",
   long_description=open('README.rst').read(),
-  packages=['wsgid', 'wsgid/core', 'wsgid/commands', 'wsgid.loaders'],
+  packages=['wsgid', 'wsgid/core', 'wsgid/commands', 'wsgid.loaders', 'wsgid/interfaces'],
   scripts=['scripts/wsgid'],
   install_requires = ['plugnplay==0.5.1', 'pyzmq==2.1.10', 'python-daemon==1.6', 'simplejson==2.3.0', 'argparse==1.2.1'],
   classifiers = [
