@@ -9,6 +9,7 @@ WSGID official Docs, Welcome!
    appstructure
    tutorials
    internals
+   extending
    contributing
    changelog
 
