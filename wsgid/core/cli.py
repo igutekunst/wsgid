@@ -3,9 +3,9 @@
 import sys
 import logging
 import os
-import re
 
-from . import get_main_logger, set_main_logger, run_command, validate_input_params
+from . import get_main_logger, run_command, validate_input_params
+import wsgid
 from ..commands import *
 import parser
 
@@ -234,4 +234,4 @@ class Cli(object):
 
     logger.addHandler(console)
     self.log = logger
-    set_main_logger(logger)
+    wsgid.core.log = logger

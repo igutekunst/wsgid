@@ -63,10 +63,6 @@ def get_main_logger():
     return log
 
 
-def set_main_logger(logger):
-    log = logger
-
-
 def run_command():
     '''
     Extract the first command line argument (if it exists)
