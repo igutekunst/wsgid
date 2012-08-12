@@ -12,4 +12,9 @@ class IPreRequestFilter(plugnplay.Interface):
 
 
 class IPostRequestFilter(plugnplay.Interface):
-    pass
+
+    def process(self, m2message, status, body, heders):
+        pass
+
+    def exception(self, m2message, exception):
+        pass
