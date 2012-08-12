@@ -613,8 +613,7 @@ class WsgidRequestFiltersTest(unittest.TestCase):
         sock_mock = Mock()
         sock_mock.recv.return_value = self.raw_msg
 
-        app_mock = Mock()
-        app_mock.return_value = ('Line1', 'Line2')  # Response body lines
+        app_mock = Mock(side_effect=Exception())
         wsgid = Wsgid(app=app_mock)
         with patch.object(wsgid, '_create_wsgi_environ') as environ_mock, \
                 patch.object(wsgid, '_setup_zmq_endpoints', Mock(return_value=(sock_mock, sock_mock))), \
@@ -631,6 +630,7 @@ class WsgidRequestFiltersTest(unittest.TestCase):
 
             def process(self, message, status, headers, body):
                 return (status, headers, body + 'FA')
+
         class BPostRequestFilter(Plugin):
             implements = [IPostRequestFilter, ]
 
