@@ -134,9 +134,11 @@ class Wsgid(object):
         '''
         Start serving requests.
         '''
+        self.log.debug("Setting up ZMQ endpoints")
         send_sock, recv_sock = self._setup_zmq_endpoints()
         self.log.info("All set, ready to serve requests...")
         while self._should_serve():
+            self.log.debug("Serving requests...")
             m2message = Message(recv_sock.recv())
             self.log.debug("Request arrived... headers={0}".format(m2message.headers))
 
@@ -149,7 +151,6 @@ class Wsgid(object):
                 continue
 
             # Call the app and send the response back to mongrel2
-            self.log.debug("Calling wsgi app...")
             self._call_wsgi_app(m2message, send_sock)
 
     '''
@@ -176,12 +177,12 @@ class Wsgid(object):
         response = None
         try:
             body = ''
-
+            self.log.debug("Calling PreRequest filters...")
             self._run_simple_filters(IPreRequestFilter.implementors(), self._filter_process_callback, m2message, environ)
 
-            self.log.debug("Waiting app to return...")
+            self.log.debug("Waiting for the WSGI app to return...")
             response = self.app(environ, start_response)
-            self.log.debug("App finished running... status={0}, headers={1}".format(start_response.status, start_response.headers))
+            self.log.debug("WSGI app finished running... status={0}, headers={1}".format(start_response.status, start_response.headers))
 
             if start_response.body_written:
                 body = start_response.body
@@ -192,6 +193,7 @@ class Wsgid(object):
             status = start_response.status
             headers = start_response.headers
 
+            self.log.debug("Calling PostRequest filters...")
             (status, headers, body) = self._run_post_filters(IPostRequestFilter.implementors(), self._filter_process_callback, m2message, status, headers, body)
 
             self.log.debug("Returning to mongrel2")
@@ -222,6 +224,7 @@ class Wsgid(object):
         r = filter_args
         for f in filters:
             try:
+                self.log.debug("Calling {0} filter".format(f.__class__.__name__))
                 r = callback(f, m2message, *r)
             except Exception as e:
                 from wsgid.core import log
