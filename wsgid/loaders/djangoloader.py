@@ -1,10 +1,7 @@
 from wsgid.loaders import IAppLoader
 from wsgid.core import Plugin, log
 import wsgid.conf
-try:
-    from django.conf import settings
-except ImportError:
-    pass  # Without django its unlikely anyone intends on using the DjangoAppLoader
+from django.conf import settings
 
 import os
 import sys
@@ -24,9 +21,14 @@ class DjangoAppLoader(Plugin):
         dirs = self._valid_dirs(app_path)
         log.debug("{0} Possible valid djangoapp folders: {1}".format(len(dirs), dirs))
         for d in dirs:
-            settings_path = os.path.join(app_path, d, 'settings.py')
-            init_path = os.path.join(app_path, d, '__init__.py')
+            settings_path = os.path.join(app_path, d, d, 'settings.py')
+            alternate_settings_path = os.path.join(app_path, d, d, 'settings')
+            log.debug("Settings file %s" % settings_path)
+
+            init_path = os.path.join(app_path, d, d, '__init__.py')
             if os.path.exists(settings_path) and os.path.exists(init_path):
+                return d
+            if os.path.exists(alternate_settings_path) and os.path.exists(init_path):
                 return d
         return None
 
@@ -55,7 +57,7 @@ class DjangoAppLoader(Plugin):
         site_name = self._first_djangoproject_dir(app_path)
         os.environ['DJANGO_SETTINGS_MODULE'] = '{0}.settings'.format(site_name)
         logger.debug("Using DJANGO_SETTINGS_MODULE = {0}".format(os.environ['DJANGO_SETTINGS_MODULE']))
-
+        logger.debug("app_path %s site_name %s" % (app_path, site_name))
         new_syspath = os.path.join(app_path, site_name)
 
         logger.debug("Adding {0} to sys.path".format(app_path))
