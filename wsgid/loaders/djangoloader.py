@@ -21,11 +21,11 @@ class DjangoAppLoader(Plugin):
         dirs = self._valid_dirs(app_path)
         log.debug("{0} Possible valid djangoapp folders: {1}".format(len(dirs), dirs))
         for d in dirs:
-            settings_path = os.path.join(app_path, d, d, 'settings.py')
-            alternate_settings_path = os.path.join(app_path, d, d, 'settings')
+            settings_path = os.path.join(app_path,  d, 'settings.py')
+            alternate_settings_path = os.path.join(app_path,  d, 'settings')
             log.debug("Settings file %s" % settings_path)
 
-            init_path = os.path.join(app_path, d, d, '__init__.py')
+            init_path = os.path.join(app_path,  d, '__init__.py')
             if os.path.exists(settings_path) and os.path.exists(init_path):
                 return d
             if os.path.exists(alternate_settings_path) and os.path.exists(init_path):
